@@ -5,8 +5,7 @@ using UnityEngine.Networking;
 using TMPro;
 using Newtonsoft.Json;
 using UnityEngine.UI;
-using ZXing;
-using ZXing.QrCode;
+using System.Linq;
 
 [System.Serializable]
 public class PlayerData
@@ -125,19 +124,33 @@ public class FirebaseController : MonoBehaviour
     {
         if (currentRoomData == null) return;
 
-        if (currentRoomData.players != null)
-        {
-            foreach (var playerEntry in currentRoomData.players)
-            {
-                string playerId = playerEntry.Key;
-                PlayerData playerData = playerEntry.Value;
+        var playersFromDb = currentRoomData.players ?? new Dictionary<string, PlayerData>();
 
-                if (!playerUIElements.ContainsKey(playerId))
-                {
-                    GameObject newPlayerUI = Instantiate(playerListItemPrefab, playerListContainer);
-                    newPlayerUI.GetComponentInChildren<TMP_Text>().text = playerData.name;
-                    playerUIElements.Add(playerId, newPlayerUI);
-                }
+        List<string> currentDisplayedIds = playerUIElements.Keys.ToList();
+
+        foreach (string displayedId in currentDisplayedIds)
+        {
+            if (!playersFromDb.ContainsKey(displayedId))
+            {
+                Destroy(playerUIElements[displayedId]);
+                playerUIElements.Remove(displayedId);
+            }
+        }
+
+        foreach (var playerEntry in playersFromDb)
+        {
+            string playerId = playerEntry.Key;
+            PlayerData playerData = playerEntry.Value;
+
+            if (!playerUIElements.ContainsKey(playerId))
+            {
+                GameObject newPlayerUI = Instantiate(playerListItemPrefab, playerListContainer);
+                newPlayerUI.GetComponentInChildren<TMP_Text>().text = playerData.name;
+                playerUIElements.Add(playerId, newPlayerUI);
+            }
+            else
+            {
+                playerUIElements[playerId].GetComponentInChildren<TMP_Text>().text = playerData.name;
             }
         }
 
