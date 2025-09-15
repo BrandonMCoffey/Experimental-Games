@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.Networking;
 using TMPro;
 using Newtonsoft.Json;
+using UnityEngine.UI;
+using ZXing;
+using ZXing.QrCode;
 
 [System.Serializable]
 public class PlayerData
@@ -31,6 +34,7 @@ public class RoomData
 public class FirebaseController : MonoBehaviour
 {
     private const string databaseUrl = "https://experimental-games-190e1-default-rtdb.firebaseio.com/";
+    private const string webAppUrl = "https://brandoncoffey.com/game/play";
 
     [Header("UI References")]
     [SerializeField] private TMP_Text roomCodeText;
@@ -39,6 +43,8 @@ public class FirebaseController : MonoBehaviour
     [SerializeField] private GameObject playerListItemPrefab;
     [SerializeField] private GameObject chatMessagePrefab;
 
+    [SerializeField] private RawImage qrCodeImage;
+
     private string roomCode;
     private RoomData currentRoomData;
 
@@ -46,6 +52,11 @@ public class FirebaseController : MonoBehaviour
     private HashSet<string> displayedMessageIds = new HashSet<string>();
 
     private void Start()
+    {
+        CreateRoom();
+    }
+
+    private void CreateRoom()
     {
         StartCoroutine(CreateRoomCoroutine());
     }
@@ -70,6 +81,9 @@ public class FirebaseController : MonoBehaviour
             if (request.result == UnityWebRequest.Result.Success)
             {
                 Debug.Log("Room created successfully!");
+
+                DisplayQrCode();
+
                 StartCoroutine(ListenForChangesCoroutine());
             }
             else
@@ -77,6 +91,14 @@ public class FirebaseController : MonoBehaviour
                 Debug.LogError($"Error creating room: {request.error}");
             }
         }
+    }
+
+    private void DisplayQrCode()
+    {
+        if (qrCodeImage == null) return;
+
+        string joinUrl = $"{webAppUrl}?code={roomCode}";
+        qrCodeImage.texture = QRCode.GenerateQR(joinUrl, 256);
     }
 
     private IEnumerator ListenForChangesCoroutine()
