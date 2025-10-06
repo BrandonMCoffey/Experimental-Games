@@ -1044,7 +1044,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 2087498186}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999966
+  m_Size: 0.99969786
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1442,7 +1442,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 15, y: -0.0000027632086}
+  m_AnchoredPosition: {x: 15, y: 0.000028104103}
   m_SizeDelta: {x: -15, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1554748058
@@ -1706,39 +1706,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2059793422}
-  - component: {fileID: 2059793421}
+  - component: {fileID: 2059793423}
   m_Layer: 0
-  m_Name: FirebaseController
+  m_Name: SampleController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2059793421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2059793420}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 91211537de3268545b7b95d8c4249152, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lobbyPanel: {fileID: 590076644}
-  gamePanel: {fileID: 1216656113}
-  timerText: {fileID: 1040137432}
-  roomCodeText: {fileID: 509444297}
-  playerListContainer: {fileID: 1976569158}
-  chatContainer: {fileID: 750725710}
-  playerListItemPrefab: {fileID: 9022875136147730566, guid: 11b703975a320c74c8a3a9b6ca56111a,
-    type: 3}
-  chatMessagePrefab: {fileID: 6761899305044562605, guid: f8e1ceb80986e7d44ba88eb21aaad46b,
-    type: 3}
-  qrCodeImage: {fileID: 2059084864}
-  forceRoomCode: XXXX
-  countdownDuration: 10
 --- !u!4 &2059793422
 Transform:
   m_ObjectHideFlags: 0
@@ -1754,6 +1729,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2059793423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2059793420}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85e8fe06e9b84dc439c0e6feabb4296c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _roomCode: 
+  _pollDatabaseInterval: 1
+  playerListContainer: {fileID: 1976569158}
+  playerListItemPrefab: {fileID: 9022875136147730566, guid: 11b703975a320c74c8a3a9b6ca56111a,
+    type: 3}
+  chatContainer: {fileID: 750725710}
+  chatMessagePrefab: {fileID: 6761899305044562605, guid: f8e1ceb80986e7d44ba88eb21aaad46b,
+    type: 3}
+  lobbyPanel: {fileID: 590076644}
+  gamePanel: {fileID: 1216656113}
+  timerText: {fileID: 1040137432}
+  qrCodeImage: {fileID: 2059084864}
+  roomCodeText: {fileID: 509444297}
+  countdownDuration: 5
 --- !u!1 &2087498185
 GameObject:
   m_ObjectHideFlags: 0

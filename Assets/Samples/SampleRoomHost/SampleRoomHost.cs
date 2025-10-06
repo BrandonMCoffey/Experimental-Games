@@ -1,146 +1,87 @@
+using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Networking;
-using TMPro;
-using Newtonsoft.Json;
-using UnityEngine.UI;
 using System.Linq;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
-[System.Serializable]
-public class PlayerData
+public class SampleRoomHost : FirebaseController
 {
-    public string name;
-    public int score;
-    public bool isReady;
-    public Dictionary<string, bool> inputs;
-}
-
-[System.Serializable]
-public class ChatMessage
-{
-    public string sender;
-    public string message;
-}
-
-[System.Serializable]
-public class RoomData
-{
-    public string gameState;
-    public string prompt;
-    public Dictionary<string, PlayerData> players;
-    public Dictionary<string, ChatMessage> chatMessages;
-}
-
-public enum GameState
-{
-    Lobby,
-    InGame,
-    PostGame
-}
-
-public class FirebaseController : MonoBehaviour
-{
-    private const string databaseUrl = "https://experimental-games-190e1-default-rtdb.firebaseio.com/";
-    private const string webAppUrl = "https://brandoncoffey.com/game/play";
-
-    [Header("UI References")]
+    [Header("Sample Room Settings")]
+    [SerializeField] private Transform playerListContainer;
+    [SerializeField] private GameObject playerListItemPrefab;
+    [SerializeField] private Transform chatContainer;
+    [SerializeField] private GameObject chatMessagePrefab;
     [SerializeField] private GameObject lobbyPanel;
     [SerializeField] private GameObject gamePanel;
     [SerializeField] private TMP_Text timerText;
-    [SerializeField] private TMP_Text roomCodeText;
-    [SerializeField] private Transform playerListContainer;
-    [SerializeField] private Transform chatContainer;
-    [SerializeField] private GameObject playerListItemPrefab;
-    [SerializeField] private GameObject chatMessagePrefab;
     [SerializeField] private RawImage qrCodeImage;
-
-    [Header("Game Settings")]
-    [SerializeField] private string forceRoomCode = "";
+    [SerializeField] private TMP_Text roomCodeText;
     [SerializeField] private float countdownDuration = 5.0f;
 
-    private string roomCode;
     private RoomData currentRoomData;
+    private GameState currentGameState = GameState.Lobby;
 
     private Dictionary<string, GameObject> playerUIElements = new Dictionary<string, GameObject>();
     private HashSet<string> displayedMessageIds = new HashSet<string>();
 
     private Coroutine gameStartTimer;
     private bool isTimerRunning = false;
-    private GameState currentGameState = GameState.Lobby;
 
-    private void Start()
+    [System.Serializable]
+    private class PlayerData
     {
-        CreateRoom();
+        public string name;
+        public int score;
+        public bool isReady;
+        public Dictionary<string, bool> inputs;
     }
 
-    private void OnDestroy()
+    [System.Serializable]
+    private class ChatMessage
     {
-        CloseRoom();
+        public string sender;
+        public string message;
     }
 
-    private void CreateRoom()
+    [System.Serializable]
+    private class RoomData
     {
-        StartCoroutine(CreateRoomCoroutine());
+        public string gameState;
+        public string prompt;
+        public Dictionary<string, PlayerData> players;
+        public Dictionary<string, ChatMessage> chatMessages;
     }
 
-    private IEnumerator CreateRoomCoroutine()
+    private enum GameState
     {
-        roomCode = string.IsNullOrEmpty(forceRoomCode) ? GenerateRoomCode() : forceRoomCode.Trim().ToUpper();
-        roomCodeText.text = roomCode;
-
-        string initialJsonData = "{\"gameState\":\"lobby\",\"prompt\":\"Waiting for players...\"}";
-        string url = $"{databaseUrl}rooms/{roomCode}.json";
-        
-        using (var request = new UnityWebRequest(url, "PUT"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(initialJsonData);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log("Room created successfully!");
-                DisplayQrCode();
-                StartCoroutine(ListenForChangesCoroutine());
-            }
-            else
-            {
-                Debug.LogError($"Error creating room: {request.error}");
-            }
-        }
+        Lobby,
+        InGame,
+        PostGame
     }
 
-    private IEnumerator ListenForChangesCoroutine()
+    protected override string GetInitialJsonData()
     {
-        string url = $"{databaseUrl}rooms/{roomCode}.json";
-        while (true)
-        {
-            using (var request = UnityWebRequest.Get(url))
-            {
-                yield return request.SendWebRequest();
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    string jsonData = request.downloadHandler.text;
-                    currentRoomData = JsonConvert.DeserializeObject<RoomData>(jsonData);
-                    ProcessRoomData();
-                }
-            }
-            yield return new WaitForSeconds(1.0f);
-        }
+        return "{\"gameState\":\"lobby\",\"prompt\":\"Waiting for players...\"}";
     }
 
-    private void ProcessRoomData()
+    protected override void OnRoomCreated(string roomCode)
     {
+        if (roomCodeText != null) roomCodeText.text = roomCode;
+        if (qrCodeImage != null) DisplayQrCode(qrCodeImage);
+    }
+
+    protected override void ProcessJsonData(string jsonData)
+    {
+        currentRoomData = JsonConvert.DeserializeObject<RoomData>(jsonData);
         if (currentRoomData == null)
         {
             Debug.Log("Room data is null");
             return;
         }
 
+        // Update Game State
         switch (currentRoomData.gameState)
         {
             case "lobby":
@@ -170,12 +111,13 @@ public class FirebaseController : MonoBehaviour
                 break;
         }
 
+        // Update Player List
         var playersFromDb = currentRoomData.players ?? new Dictionary<string, PlayerData>();
-
         List<string> currentDisplayedIds = playerUIElements.Keys.ToList();
 
         foreach (string displayedId in currentDisplayedIds)
         {
+            // Check remove players
             if (!playersFromDb.ContainsKey(displayedId))
             {
                 Destroy(playerUIElements[displayedId]);
@@ -185,6 +127,7 @@ public class FirebaseController : MonoBehaviour
 
         foreach (var playerEntry in playersFromDb)
         {
+            // Check add or update players
             string playerId = playerEntry.Key;
             PlayerData playerData = playerEntry.Value;
 
@@ -200,6 +143,7 @@ public class FirebaseController : MonoBehaviour
             }
         }
 
+        // Update Chat
         if (currentRoomData.chatMessages != null)
         {
             foreach (var msgEntry in currentRoomData.chatMessages)
@@ -216,6 +160,7 @@ public class FirebaseController : MonoBehaviour
             }
         }
 
+        // Input Handling Example
         if (currentGameState == GameState.InGame)
         {
             foreach (var playerEntry in playersFromDb)
@@ -230,6 +175,12 @@ public class FirebaseController : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void SetGameState(string newState)
+    {
+        string jsonData = $"\"{newState}\"";
+        SendJsonData("gameState", jsonData);
     }
 
     private void CheckReadyState()
@@ -277,7 +228,7 @@ public class FirebaseController : MonoBehaviour
         timerText.text = "Starting!";
         isTimerRunning = false;
 
-        StartCoroutine(SetGameState("in-game"));
+        SetGameState("in-game");
     }
 
     private void StopGameTimer()
@@ -289,60 +240,5 @@ public class FirebaseController : MonoBehaviour
         }
         isTimerRunning = false;
         timerText.text = "";
-    }
-
-    private IEnumerator SetGameState(string newState)
-    {
-        string url = $"{databaseUrl}rooms/{roomCode}/gameState.json";
-        string jsonData = $"\"{newState}\"";
-
-        using (var request = new UnityWebRequest(url, "PUT"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"Error setting game state: {request.error}");
-            }
-            else
-            {
-                Debug.Log($"Game state set to {newState}");
-            }
-        }
-    }
-
-    private string GenerateRoomCode()
-    {
-        string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        string code = "";
-        for (int i = 0; i < 4; i++) code += chars[Random.Range(0, chars.Length)];
-        return code;
-    }
-
-    private void DisplayQrCode()
-    {
-        if (qrCodeImage == null) return;
-
-        string joinUrl = $"{webAppUrl}?code={roomCode}";
-        qrCodeImage.texture = QRCode.GenerateQR(joinUrl, 256);
-    }
-
-    private void CloseRoom()
-    {
-        if (!string.IsNullOrEmpty(roomCode))
-        {
-            Debug.Log($"Deleting room {roomCode}...");
-            string url = $"{databaseUrl}rooms/{roomCode}.json";
-            using (var request = UnityWebRequest.Delete(url))
-            {
-                request.SendWebRequest();
-            }
-            roomCode = "";
-        }
     }
 }
